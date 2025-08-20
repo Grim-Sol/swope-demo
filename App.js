@@ -623,6 +623,7 @@ export default function App() {
                   ) : (
                     <>
                       {/* Barre de filtres */}
+                      // [SWOPE_FILTERS:START]
                       <View style={{ flexDirection:'row', alignItems:'center', marginBottom: 6 }}>
                         <FilterField label="Marque" value={brandFilter} onPress={() => setBrandPickerOpen(true)} colors={colors} />
                         <FilterField label="Taille" value={sizeFilter} onPress={() => setSizePickerOpen(true)} colors={colors} />
@@ -654,6 +655,7 @@ export default function App() {
                       />
 
                       {/* Deck Swiper (centré, 3:4) */}
+                      // [SWOPE_DECK:START]
                       <View style={styles.deck}>
                         {inRange ? (
                           <Swiper
@@ -704,9 +706,10 @@ export default function App() {
                       </View>
 
                       {/* Bandeau info SOUS la photo (effet “glass” renforcé) */}
+                      // [SWOPE_GLASS:START]
                       {current && (
                         <View style={styles.infoPanelWrap}>
-                          <View style={[styles.glassPanelBelow, { borderColor: isDark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.08)' }]}> 
+                          <View style={[styles.glassPanelBelow, { borderColor: (colors.blurTint === 'dark') ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.08)' }]}> 
                             {/* Fond = image floutée */}
                             <Image
                               source={{ uri: current.image }}
@@ -719,13 +722,13 @@ export default function App() {
                             <LinearGradient
                               colors={['rgba(255,255,255,0.14)','rgba(255,255,255,0)']}
                               start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}
-                              style={[StyleSheet.absoluteFill, { opacity: isDark ? 0.30 : 0.60 }]}
+                              style={[StyleSheet.absoluteFill, { opacity: (colors.blurTint === 'dark') ? 0.30 : 0.60 }]}
                             />
                             {/* Voile de lisibilité */}
                             <View
                               style={[
                                 StyleSheet.absoluteFill,
-                                { backgroundColor: isDark ? 'rgba(0,0,0,0.10)' : 'rgba(255,255,255,0.18)' }
+                                { backgroundColor: (colors.blurTint === 'dark') ? 'rgba(0,0,0,0.10)' : 'rgba(255,255,255,0.18)' }
                               ]}
                             />
                             {/* Contenu */}
@@ -739,11 +742,12 @@ export default function App() {
                       )}
 
                       {/* Actions : boutons “glass” colorés */}
+                      // [SWOPE_ACTIONS:START]
                       <View style={styles.actions}>
                         {/* Passer (rouge) */}
                         <TouchableOpacity
                           activeOpacity={0.85}
-                          style={[styles.btnXL, styles.glassBtn]}
+                          style={[styles.btnXL, styles.glassBtn, { borderColor: (colors.blurTint === 'dark') ? 'rgba(255,255,255,0.14)' : 'rgba(0,0,0,0.10)' }]}
                           onPress={() => manualSwipe(-1)}
                           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                           accessibilityRole="button"
@@ -755,7 +759,7 @@ export default function App() {
                             colors={['rgba(255,255,255,0.18)','rgba(255,255,255,0)']}
                             start={{ x: 0, y: 0 }}
                             end={{ x: 0, y: 1 }}
-                            style={[StyleSheet.absoluteFill, { opacity: isDark ? 0.35 : 0.55 }]}
+                            style={[StyleSheet.absoluteFill, { opacity: (colors.blurTint === 'dark') ? 0.35 : 0.55 }]}
                           />
                           <Text style={[styles.btnLabelXL, { color: colors.passText }]}>👎  Passer</Text>
                         </TouchableOpacity>
@@ -763,7 +767,7 @@ export default function App() {
                         {/* Favori (bleu) */}
                         <TouchableOpacity
                           activeOpacity={0.85}
-                          style={[styles.btnXL, styles.glassBtn]}
+                          style={[styles.btnXL, styles.glassBtn, { borderColor: (colors.blurTint === 'dark') ? 'rgba(255,255,255,0.14)' : 'rgba(0,0,0,0.10)' }]}
                           onPress={() => manualSwipe(1)}
                           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                           accessibilityRole="button"
@@ -775,15 +779,18 @@ export default function App() {
                             colors={['rgba(255,255,255,0.18)','rgba(255,255,255,0)']}
                             start={{ x: 0, y: 0 }}
                             end={{ x: 0, y: 1 }}
-                            style={[StyleSheet.absoluteFill, { opacity: isDark ? 0.35 : 0.55 }]}
+                            style={[StyleSheet.absoluteFill, { opacity: (colors.blurTint === 'dark') ? 0.35 : 0.55 }]}
                           />
                           <Text style={[styles.btnLabelXL, { color: colors.likeText }]}>💙  Favori</Text>
                         </TouchableOpacity>
-                      </View>
+                       </View>
+                      // [SWOPE_FILTERS:END]
                     </>
                   )}
-                </View>
-              )}
+                       </View>
+                      // [SWOPE_DECK:END]
+                       )}
+                      // [SWOPE_GLASS:END]
             </Tab.Screen>
             <Tab.Screen name="Account" options={{ title: 'Compte' }}>
               {() => (
@@ -835,7 +842,8 @@ export default function App() {
                             <Text style={{ color: colors.text }}>{opt.label}</Text>
                           </TouchableOpacity>
                         ))}
-                      </View>
+                       </View>
+                      // [SWOPE_ACTIONS:END]
 
                       {/* OAuth toujours visibles en haut */}
                       <View style={{ flexDirection: 'row', marginBottom: 12 }}>
