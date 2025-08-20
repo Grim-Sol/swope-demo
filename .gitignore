@@ -1,0 +1,13 @@
+node_modules/
+.expo/
+.expo-shared/
+.DS_Store
+ios/Pods/
+android/.gradle/
+android/app/build/
+android/build/
+.env
+.env.*
+*.keystore
+*.jks
+dist/
