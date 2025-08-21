@@ -3,6 +3,7 @@ import 'react-native-gesture-handler';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaView, View, Text, Image, StyleSheet, TouchableOpacity, Modal, Pressable, FlatList, ActivityIndicator, TextInput, ScrollView, Alert, useColorScheme, Dimensions } from 'react-native';
 import Swiper from 'react-native-deck-swiper';
 import { BlurView } from 'expo-blur';
@@ -538,474 +539,250 @@ export default function App() {
                 {() => {
                   const theme = colors;
                   const dark  = (theme.blurTint === 'dark');
+                  const Stack = createNativeStackNavigator();
+
+                  // ÉTATS LOCAUX (connexion + inscription)
+                  const [loginEmail, setLoginEmail]       = React.useState('');
+                  const [loginPassword, setLoginPassword] = React.useState('');
+                  const [regEmail, setRegEmail]           = React.useState('');
+                  const [regPassword, setRegPassword]     = React.useState('');
+                  const [regCode, setRegCode]             = React.useState('');
+                  const [regStage, setRegStage]           = React.useState('form'); // 'form' | 'code'
+                  const [authLoading, setAuthLoading]     = React.useState(false);
+
+                  async function doLogin() {
+                    try {
+                      setAuthLoading(true);
+                      const { error } = await supabase.auth.signInWithPassword({ email: loginEmail, password: loginPassword });
+                      if (error) throw error;
+                    } catch (e) {
+                      Alert.alert('Erreur', e?.message ?? 'Connexion impossible');
+                    } finally {
+                      setAuthLoading(false);
+                    }
+                  }
+
+                  async function startRegister() {
+                    if (!regEmail || !regPassword) { Alert.alert('Champs requis', 'Email et mot de passe'); return; }
+                    try {
+                      setAuthLoading(true);
+                      const { error } = await supabase.auth.signInWithOtp({
+                        email: regEmail,
+                        options: { shouldCreateUser: true },
+                      });
+                      if (error) throw error;
+                      Alert.alert('Code envoyé ✅', `Un code a été envoyé à ${regEmail}`);
+                      setRegStage('code');
+                    } catch (e) {
+                      Alert.alert('Erreur', e?.message ?? 'Impossible d’envoyer le code');
+                    } finally {
+                      setAuthLoading(false);
+                    }
+                  }
+
+                  async function verifyRegister(navigation) {
+                }
+
+                function LoginScreen({ navigation }) {
                   return (
-                    <View style={{ flex: 1, backgroundColor: theme.bg }}>
-                      <ThemeSelector pref={themePref} setPref={setThemePref} colors={theme} />
-                      {loading ? (
-                        <View style={[styles.center]}>
-                          <ActivityIndicator size="large" />
-                          <Text style={{ marginTop: 8, color: theme.text }}>Chargement…</Text>
-                        </View>
-                      ) : mode === 'create' ? (
-                        <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
-                          <Text style={{ fontSize: 22, fontWeight: '700', marginBottom: 12, color: theme.text }}>
-                            Nouvelle annonce
-                          </Text>
-                          <TouchableOpacity onPress={pickImage} style={[styles.imagePick, { backgroundColor: theme.card }]}> 
-                            {pickedImage ? (
-                              <Image source={{ uri: pickedImage.uri }} style={styles.pickPreview} />
-                            ) : (
-                              <Text style={{ color: theme.textMuted }}>Choisir une photo</Text>
-                            )}
-                          </TouchableOpacity>
+                    <ScrollView
+                      keyboardShouldPersistTaps="handled"
+                      keyboardDismissMode="none"
+                      contentContainerStyle={{ paddingBottom: 40 }}
+                      style={{ backgroundColor: theme.bg }}
+                    >
+                      <Text style={{ color: theme.text, fontSize: 22, fontWeight: '700', marginBottom: 12 }}>
+                        Se connecter
+                      </Text>
+                      <View style={{ flexDirection: 'row', marginBottom: 12 }}>
+                        <TouchableOpacity
+                          onPress={() => oauthSignIn('google')}
+                          style={[styles.btn, { backgroundColor: theme.card, borderWidth: StyleSheet.hairlineWidth, borderColor: theme.border, marginRight: 8 }]}
+                          activeOpacity={0.85}
+                        >
+                          <Text style={{ color: theme.text, fontWeight: '700' }}>Continuer avec Google</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          onPress={() => oauthSignIn('facebook')}
+                          style={[styles.btn, { backgroundColor: theme.card, borderWidth: StyleSheet.hairlineWidth, borderColor: theme.border }]}
+                          activeOpacity={0.85}
+                        >
+                          <Text style={{ color: theme.text, fontWeight: '700' }}>Facebook</Text>
+                        </TouchableOpacity>
+                      </View>
+                      <Text style={{ color: theme.textMuted, marginVertical: 4, textAlign: 'center' }}>— ou —</Text>
+                      <TextInput
+                        style={[styles.input, { backgroundColor: theme.card, borderColor: theme.border, color: theme.text }]}
+                        placeholder="Email" placeholderTextColor={theme.textMuted}
+                        autoCapitalize="none" autoCorrect={false}
+                        textContentType="emailAddress" autoComplete="email"
+                        value={loginEmail} onChangeText={setLoginEmail}
+                      />
+                      <TextInput
+                        style={[styles.input, { backgroundColor: theme.card, borderColor: theme.border, color: theme.text }]}
+                        placeholder="Mot de passe" placeholderTextColor={theme.textMuted}
+                        secureTextEntry textContentType="password" autoComplete="password"
+                        value={loginPassword} onChangeText={setLoginPassword}
+                      />
+                      <TouchableOpacity
+                        style={[styles.btn, { backgroundColor: theme.likeBg }]}
+                        onPress={doLogin} disabled={authLoading}
+                      >
+                        <Text style={{ color: theme.likeText, fontWeight: '700' }}>Se connecter</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={{ alignSelf:'center', marginTop: 12 }}
+                        onPress={() => navigation.navigate('Register')}
+                      >
+                        <Text style={{ color: theme.likeBg, fontWeight: '700' }}>Créer son compte</Text>
+                      </TouchableOpacity>
+                    </ScrollView>
+                  );
+                }
+
+                function RegisterScreen({ navigation }) {
+                  return (
+                    <ScrollView
+                      keyboardShouldPersistTaps="handled"
+                      keyboardDismissMode="none"
+                      contentContainerStyle={{ paddingBottom: 40 }}
+                      style={{ backgroundColor: theme.bg }}
+                    >
+                      <Text style={{ color: theme.text, fontSize: 22, fontWeight: '700', marginBottom: 12 }}>
+                        Créer un compte
+                      </Text>
+                      {regStage === 'form' ? (
+                        <>
                           <TextInput
                             style={[styles.input, { backgroundColor: theme.card, borderColor: theme.border, color: theme.text }]}
-                            placeholder="Titre" placeholderTextColor={theme.textMuted}
-                            value={title} onChangeText={setTitle}
+                            placeholder="Email" placeholderTextColor={theme.textMuted}
+                            autoCapitalize="none" autoCorrect={false}
+                            textContentType="emailAddress" autoComplete="email"
+                            value={regEmail} onChangeText={setRegEmail}
                           />
-                          <TouchableOpacity
-                            onPress={() => setBrandCreateOpen(true)}
-                            style={[styles.input, { backgroundColor: theme.card, borderColor: theme.border }]}
-                          >
-                            <Text style={{ color: createBrand ? theme.text : theme.textMuted }}>
-                              {createBrand ? `Marque: ${createBrand}` : 'Choisir une marque'}
-                            </Text>
-                          </TouchableOpacity>
-                          <TouchableOpacity
-                            onPress={() => setSizeCreateOpen(true)}
-                            style={[styles.input, { backgroundColor: theme.card, borderColor: theme.border }]}
-                          >
-                            <Text style={{ color: createSize ? theme.text : theme.textMuted }}>
-                              {createSize ? `Taille: ${createSize}` : 'Choisir une taille'}
-                            </Text>
-                          </TouchableOpacity>
                           <TextInput
                             style={[styles.input, { backgroundColor: theme.card, borderColor: theme.border, color: theme.text }]}
-                            placeholder="Prix (€)" placeholderTextColor={theme.textMuted}
-                            keyboardType="decimal-pad" value={price} onChangeText={setPrice}
+                            placeholder="Mot de passe" placeholderTextColor={theme.textMuted}
+                            secureTextEntry textContentType="newPassword" autoComplete="new-password"
+                            value={regPassword} onChangeText={setRegPassword}
                           />
-                          <DropdownModal
-                            visible={brandCreateOpen}
-                            onClose={() => setBrandCreateOpen(false)}
-                            title="Choisir une marque"
-                            options={TAXONOMY.brands}
-                            selected={createBrand}
-                            onSelect={setCreateBrand}
-                            colors={theme}
+                          <TouchableOpacity
+                            style={[styles.btn, { backgroundColor: theme.likeBg }]}
+                            onPress={startRegister} disabled={authLoading}
+                          >
+                            <Text style={{ color: theme.likeText, fontWeight: '700' }}>Envoyer le code</Text>
+                          </TouchableOpacity>
+
+                          <TouchableOpacity
+                            style={{ alignSelf:'center', marginTop: 12 }}
+                            onPress={() => navigation.replace('Login')}
+                          >
+                            <Text style={{ color: theme.textMuted }}>J’ai déjà un compte</Text>
+                          </TouchableOpacity>
+                        </>
+                      ) : (
+                        <>
+                          <TextInput
+                            style={[styles.input, { backgroundColor: theme.card, borderColor: theme.border, color: theme.text }]}
+                            placeholder="Code à 6 chiffres" placeholderTextColor={theme.textMuted}
+                            keyboardType="number-pad" textContentType="oneTimeCode" autoComplete="one-time-code"
+                            value={regCode} onChangeText={setRegCode} maxLength={6}
                           />
-                          <DropdownModal
-                            visible={sizeCreateOpen}
-                            onClose={() => setSizeCreateOpen(false)}
-                            title="Choisir une taille"
-                            options={TAXONOMY.sizes}
-                            selected={createSize}
-                            onSelect={setCreateSize}
-                            colors={theme}
-                          />
-                          <View style={{ flexDirection: 'row', gap: 12, marginTop: 12 }}>
+                          <View style={{ flexDirection:'row', gap: 12 }}>
                             <TouchableOpacity
-                              style={[styles.btn, { backgroundColor: theme.passBg }]} onPress={() => setMode('view')} disabled={submitting}>
+                              style={[styles.btn, { backgroundColor: theme.passBg }]}
+                              onPress={() => { setRegStage('form'); setRegCode(''); }}
+                              disabled={authLoading}
+                            >
                               <Text style={{ color: theme.passText, fontWeight: '700' }}>Annuler</Text>
                             </TouchableOpacity>
                             <TouchableOpacity
-                              style={[styles.btn, { backgroundColor: theme.likeBg }]} onPress={uploadImageAndInsert} disabled={submitting}>
-                              <Text style={{ color: theme.likeText, fontWeight: '700' }}>Publier</Text>
-                            </TouchableOpacity>
-                          </View>
-                        </ScrollView>
-                      ) : !current ? (
-                        <View style={[styles.center]}>
-                          <Text style={[styles.done, { color: theme.text }]}>Aucun article — ajuste les filtres ou ajoute le tien !</Text>
-                          <TouchableOpacity
-                            style={[styles.btn, { backgroundColor: theme.likeBg, marginTop: 12 }]} onPress={() => setMode('create')}>
-                            <Text style={{ color: theme.likeText, fontWeight: '700' }}>+ Ajouter</Text>
-                          </TouchableOpacity>
-                        </View>
-                      ) : (
-                        <View style={{ flex: 1 }}>
-                          {/* Barre de filtres */}
-                          {/* [SWOPE_FILTERS:START] */}
-                          <View style={{ flexDirection:'row', alignItems:'center', marginBottom: 6 }}>
-                            <FilterField label="Marque" value={brandFilter} onPress={() => setBrandPickerOpen(true)} colors={theme} />
-                            <FilterField label="Taille" value={sizeFilter} onPress={() => setSizePickerOpen(true)} colors={theme} />
-                            {!!(brandFilter || sizeFilter) && (
-                              <TouchableOpacity onPress={() => { setBrandFilter(null); setSizeFilter(null); }} style={{ marginLeft: 8 }}>
-                                <Text style={{ color: theme.textMuted }}>Réinitialiser</Text>
-                              </TouchableOpacity>
-                            )}
-                          </View>
-
-                          {/* Modals dropdown filtres */}
-                          <DropdownModal
-                            visible={brandPickerOpen}
-                            onClose={() => setBrandPickerOpen(false)}
-                            title="Choisir une marque"
-                            options={TAXONOMY.brands}
-                            selected={brandFilter}
-                            onSelect={setBrandFilter}
-                            colors={theme}
-                          />
-                          <DropdownModal
-                            visible={sizePickerOpen}
-                            onClose={() => setSizePickerOpen(false)}
-                            title="Choisir une taille"
-                            options={TAXONOMY.sizes}
-                            selected={sizeFilter}
-                            onSelect={setSizeFilter}
-                            colors={theme}
-                          />
-
-                          {/* Deck Swiper (centré, 3:4) */}
-                          {/* [SWOPE_DECK:START] */}
-                          <View style={styles.deck}>
-                            {inRange ? (
-                              <Swiper
-                                key={`${brandFilter ?? 'all'}-${sizeFilter ?? 'all'}-${len(feedItems)}`}
-                                ref={swiperRef}
-                                cards={feedItems}
-                                stackSize={2}
-                                stackSeparation={0}
-                                verticalSwipe={false}
-                                cardVerticalMargin={0}
-                                cardHorizontalMargin={0}
-                                backgroundColor="transparent"
-                                containerStyle={styles.swiperContainer}
-                                cardStyle={styles.swiperCard}
-                                onSwiped={(i) => setIndex(i + 1)}
-                                onSwipedLeft={(i) => {
-                                  hapticCommit(-1);
-                                  const swiped = feedItems[i];
-                                  if (swiped && swiped.id) recordSwipeByUser('pass', swiped.id);
-                                }}
-                                onSwipedRight={(i) => {
-                                  hapticCommit(1);
-                                  const swiped = feedItems[i];
-                                  if (swiped && swiped.id) recordSwipeByUser('favorite', swiped.id);
-                                }}
-                                onSwipedAll={() => {
-                                  setIndex(len(feedItems));
-                                }}
-                                renderCard={item =>
-                                  item && item.image ? (
-                                    <View style={styles.swiperCard}>
-                                      <View style={styles.mediaFrame}>
-                                        <Image source={{ uri: item.image }} fadeDuration={0} style={styles.image} />
-                                      </View>
-                                    </View>
-                                  ) : (
-                                    <View style={[styles.swiperCard, { backgroundColor: theme.card, alignItems: 'center', justifyContent: 'center' }]}> 
-                                      <Text style={{ color: theme.textMuted }}>Aucune carte</Text>
-                                    </View>
-                                  )
-                                }
-                              />
-                            ) : (
-                              <View style={[styles.swiperCard, { backgroundColor: theme.card, alignItems: 'center', justifyContent: 'center' }]}> 
-                                <Text style={{ color: theme.textMuted }}>Aucune carte</Text>
-                              </View>
-                            )}
-                          </View>
-
-                          {/* Bandeau info SOUS la photo (effet “glass” renforcé) */}
-                          {/* [SWOPE_GLASS:START] */}
-                          {current && (
-                            <View style={styles.infoPanelWrap}>
-                              <View style={[styles.glassPanelBelow, { borderColor: dark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.08)' }]}> 
-                                {/* Fond = image floutée */}
-                                <Image
-                                  source={{ uri: current.image }}
-                                  style={[StyleSheet.absoluteFill, { transform: [{ rotate: '180deg' }] }]}
-                                  resizeMode="cover"
-                                  blurRadius={36}
-                                />
-                                {/* Flou additionnel + highlight vertical */}
-                                <BlurView intensity={38} tint={theme.blurTint} style={StyleSheet.absoluteFill} />
-                                <LinearGradient
-                                  colors={['rgba(255,255,255,0.14)','rgba(255,255,255,0)']}
-                                  start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}
-                                  style={[StyleSheet.absoluteFill, { opacity: dark ? 0.35 : 0.6 }]}
-                                />
-                                {/* Voile de lisibilité */}
-                                <View
-                                  style={[
-                                    StyleSheet.absoluteFill,
-                                    { backgroundColor: dark ? 'rgba(0,0,0,0.10)' : 'rgba(255,255,255,0.18)' }
-                                  ]}
-                                />
-                                {/* Contenu */}
-                                <View style={{ paddingHorizontal: 14, paddingTop: 10, paddingBottom: 14 }}>
-                                  <Text style={styles.title}>{current.brand} · {current.title}</Text>
-                                  <Text style={styles.meta}>{current.size}</Text>
-                                  <Text style={styles.price}>{(current.price_cents / 100).toFixed(2)} €</Text>
-                                </View>
-                              </View>
-                            </View>
-                          )}
-
-                          {/* Actions : boutons “glass” colorés */}
-                          {/* [SWOPE_ACTIONS:START] */}
-                          <View style={styles.actions}>
-                            {/* Passer (rouge) */}
-                            <TouchableOpacity
-                              activeOpacity={0.85}
-                              style={[styles.btnXL, styles.glassBtn, { borderColor: dark ? 'rgba(255,255,255,0.14)' : 'rgba(0,0,0,0.10)' }]}
-                              onPress={() => manualSwipe(-1)}
-                              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                              accessibilityRole="button"
-                              accessibilityLabel="Passer"
+                              style={[styles.btn, { backgroundColor: theme.likeBg }]}
+                              onPress={() => verifyRegister(navigation)} disabled={authLoading}
                             >
-                              <BlurView intensity={32} tint={theme.blurTint} style={StyleSheet.absoluteFill} />
-                              <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255,59,48,0.42)' }]} />
-                              <LinearGradient
-                                colors={['rgba(255,255,255,0.18)','rgba(255,255,255,0)']}
-                                start={{ x: 0, y: 0 }}
-                                end={{ x: 0, y: 1 }}
-                                style={[StyleSheet.absoluteFill, { opacity: dark ? 0.35 : 0.55 }]}
-                              />
-                              <Text style={[styles.btnLabelXL, { color: theme.passText }]}>👎  Passer</Text>
-                            </TouchableOpacity>
-
-                            {/* Favori (bleu) */}
-                            <TouchableOpacity
-                              activeOpacity={0.85}
-                              style={[styles.btnXL, styles.glassBtn, { borderColor: dark ? 'rgba(255,255,255,0.14)' : 'rgba(0,0,0,0.10)' }]}
-                              onPress={() => manualSwipe(1)}
-                              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                              accessibilityRole="button"
-                              accessibilityLabel="Ajouter aux favoris"
-                            >
-                              <BlurView intensity={32} tint={theme.blurTint} style={StyleSheet.absoluteFill} />
-                              <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(10,132,255,0.42)' }]} />
-                              <LinearGradient
-                                colors={['rgba(255,255,255,0.18)','rgba(255,255,255,0)']}
-                                start={{ x: 0, y: 0 }}
-                                end={{ x: 0, y: 1 }}
-                                style={[StyleSheet.absoluteFill, { opacity: dark ? 0.35 : 0.55 }]}
-                              />
-                              <Text style={[styles.btnLabelXL, { color: theme.likeText }]}>💙  Favori</Text>
+                              <Text style={{ color: theme.likeText, fontWeight: '700' }}>Valider</Text>
                             </TouchableOpacity>
                           </View>
-                          {/* [SWOPE_FILTERS:END] */}
-                        </View>
+                        </>
                       )}
-                    </View>
+                    </ScrollView>
                   );
-                }}
-                </Tab.Screen>
-                <Tab.Screen name="Account" options={{ title: 'Compte' }}>
-                  {() => {
-                    const theme = colors;
-                    const dark  = (theme.blurTint === 'dark');
-                            return (
-                              user ? (
-                                <ScrollView
-                                  keyboardShouldPersistTaps="handled"
-                                  keyboardDismissMode="none"
-                                  contentContainerStyle={{ paddingBottom: 40 }}
-                                  style={{ backgroundColor: theme.bg }}
-                                >
-                                  <Text style={{ color: theme.text, fontSize: 22, fontWeight: '700', marginBottom: 12 }}>
-                                    Mon compte
-                                  </Text>
-                                  <Text style={{ color: theme.text, marginBottom: 8 }}>
-                                    Connecté : {user.email ?? 'Utilisateur'}
-                                  </Text>
-                                  <TouchableOpacity
-                                    style={[styles.btn, { backgroundColor: theme.passBg, marginTop: 12 }]}
-                                    onPress={signOut}
-                                  >
-                                    <Text style={{ color: theme.passText, fontWeight: '700' }}>Se déconnecter</Text>
-                                  </TouchableOpacity>
-                                </ScrollView>
-                              ) : (
-                                <ScrollView
-                                  keyboardShouldPersistTaps="handled"
-                                  keyboardDismissMode="none"
-                                  contentContainerStyle={{ paddingBottom: 40 }}
-                                  style={{ backgroundColor: theme.bg }}
-                                >
-                                  {/* Switcher d’auth */}
-                                  <View style={{ flexDirection: 'row', alignSelf: 'center', marginBottom: 12 }}>
-                                    {[
-                                      { k: 'signin', label: 'Connexion' },
-                                      { k: 'signup', label: 'Créer un compte' },
-                                      { k: 'otp-first', label: 'Code (1ʳᵉ fois)' },
-                                    ].map(opt => (
-                                      <TouchableOpacity
-                                        key={opt.k}
-                                        onPress={() => setAuthMode(opt.k)}
-                                        style={{
-                                          paddingVertical: 8, paddingHorizontal: 12, borderRadius: 10,
-                                          borderWidth: 1, borderColor: theme.border,
-                                          backgroundColor: authMode === opt.k ? theme.border : 'transparent', marginRight: 8
-                                        }}
-                                      >
-                                        <Text style={{ color: theme.text }}>{opt.label}</Text>
-                                      </TouchableOpacity>
-                                    ))}
-                                   </View>
-                                  {/* OAuth toujours visibles en haut */}
-                                  <View style={{ flexDirection: 'row', marginBottom: 12 }}>
-                                    <TouchableOpacity
-                                      onPress={() => oauthSignIn('google')}
-                                      style={[styles.btn, { backgroundColor: theme.card, borderWidth: StyleSheet.hairlineWidth, borderColor: theme.border, marginRight: 8 }]}
-                                      activeOpacity={0.85}
-                                    >
-                                      <Text style={{ color: theme.text, fontWeight: '700' }}>Continuer avec Google</Text>
-                                    </TouchableOpacity>
-                                    <TouchableOpacity
-                                      onPress={() => oauthSignIn('facebook')}
-                                      style={[styles.btn, { backgroundColor: theme.card, borderWidth: StyleSheet.hairlineWidth, borderColor: theme.border }]}
-                                      activeOpacity={0.85}
-                                    >
-                                      <Text style={{ color: theme.text, fontWeight: '700' }}>Facebook</Text>
-                                    </TouchableOpacity>
-                                  </View>
-                                  <Text style={{ color: theme.textMuted, marginVertical: 4, textAlign: 'center' }}>— ou —</Text>
-                                  {/* Signin */}
-                                  {authMode === 'signin' && (
-                                    <>
-                                      <TextInput
-                                        style={[styles.input, { backgroundColor: theme.card, borderColor: theme.border, color: theme.text }]}
-                                        placeholder="Email"
-                                        placeholderTextColor={theme.textMuted}
-                                        autoCapitalize="none"
-                                        autoCorrect={false}
-                                        textContentType="emailAddress"
-                                        autoComplete="email"
-                                        value={authEmail}
-                                        onChangeText={setAuthEmail}
-                                      />
-                                      <TextInput
-                                        style={[styles.input, { backgroundColor: theme.card, borderColor: theme.border, color: theme.text }]}
-                                        placeholder="Mot de passe"
-                                        placeholderTextColor={theme.textMuted}
-                                        secureTextEntry
-                                        textContentType="password"
-                                        autoComplete="password"
-                                        value={password}
-                                        onChangeText={setPassword}
-                                      />
-                                      <TouchableOpacity style={[styles.btn, { backgroundColor: theme.likeBg }]} onPress={signInWithEmailPassword} disabled={authLoading}>
-                                        <Text style={{ color: theme.likeText, fontWeight: '700' }}>Se connecter</Text>
-                                      </TouchableOpacity>
-                                    </>
-                                  )}
-                                  {/* Signup */}
-                                  {authMode === 'signup' && (
-                                    <>
-                                      <TextInput
-                                        style={[styles.input, { backgroundColor: theme.card, borderColor: theme.border, color: theme.text }]}
-                                        placeholder="Email"
-                                        placeholderTextColor={theme.textMuted}
-                                        autoCapitalize="none"
-                                        autoCorrect={false}
-                                        textContentType="emailAddress"
-                                        autoComplete="email"
-                                        value={authEmail}
-                                        onChangeText={setAuthEmail}
-                                      />
-                                      <TextInput
-                                        style={[styles.input, { backgroundColor: theme.card, borderColor: theme.border, color: theme.text }]}
-                                        placeholder="Mot de passe (≥ 8)"
-                                        placeholderTextColor={theme.textMuted}
-                                        secureTextEntry
-                                        textContentType="newPassword"
-                                        autoComplete="new-password"
-                                        value={password}
-                                        onChangeText={setPassword}
-                                      />
-                                      <TouchableOpacity style={[styles.btn, { backgroundColor: theme.likeBg }]} onPress={signUpWithEmailPassword} disabled={authLoading}>
-                                        <Text style={{ color: theme.likeText, fontWeight: '700' }}>Créer un compte</Text>
-                                      </TouchableOpacity>
-                                    </>
-                                  )}
-                                  {/* OTP première fois */}
-                                  {authMode === 'otp-first' && (
-                                    <>
-                                      {authStage === 'request' ? (
-                                        <>
-                                          <TextInput
-                                            style={[styles.input, { backgroundColor: theme.card, borderColor: theme.border, color: theme.text }]}
-                                            placeholder="Email"
-                                            placeholderTextColor={theme.textMuted}
-                                            autoCapitalize="none"
-                                            autoCorrect={false}
-                                            textContentType="emailAddress"
-                                            autoComplete="email"
-                                            value={authEmail}
-                                            onChangeText={setAuthEmail}
-                                          />
-                                          <TouchableOpacity style={[styles.btn, { backgroundColor: theme.likeBg }]} onPress={requestEmailOtp} disabled={authLoading}>
-                                            <Text style={{ color: theme.likeText, fontWeight: '700' }}>Recevoir le code</Text>
-                                          </TouchableOpacity>
-                                        </>
-                                      ) : (
-                                        <>
-                                          <TextInput
-                                            style={[styles.input, { backgroundColor: theme.card, borderColor: theme.border, color: theme.text }]}
-                                            placeholder="Code à 6 chiffres"
-                                            placeholderTextColor={theme.textMuted}
-                                            keyboardType="number-pad"
-                                            textContentType="oneTimeCode"
-                                            autoComplete="one-time-code"
-                                            value={otpToken}
-                                            onChangeText={setOtpToken}
-                                            maxLength={6}
-                                          />
-                                          <View style={{ flexDirection: 'row', gap: 12 }}>
-                                            <TouchableOpacity style={[styles.btn, { backgroundColor: theme.passBg }]} onPress={() => { setAuthStage('request'); setOtpToken(''); }} disabled={authLoading}>
-                                              <Text style={{ color: theme.passText, fontWeight: '700' }}>Annuler</Text>
-                                            </TouchableOpacity>
-                                            <TouchableOpacity style={[styles.btn, { backgroundColor: theme.likeBg }]} onPress={verifyEmailOtp} disabled={authLoading}>
-                                              <Text style={{ color: theme.likeText, fontWeight: '700' }}>Valider</Text>
-                                            </TouchableOpacity>
-                                          </View>
-                                        </>
-                                      )}
-                                    </>
-                                  )}
-                                  {/* Définir un mot de passe (après OTP validé) */}
-                                  {authMode === 'set-password' && (
-                                    <>
-                                      <Text style={{ color: theme.textMuted, marginBottom: 8 }}>
-                                        Définis un mot de passe pour tes prochaines connexions.
-                                      </Text>
-                                      <TextInput
-                                        style={[styles.input, { backgroundColor: theme.card, borderColor: theme.border, color: theme.text }]}
-                                        placeholder="Nouveau mot de passe (≥ 8)"
-                                        placeholderTextColor={theme.textMuted}
-                                        secureTextEntry
-                                        textContentType="newPassword"
-                                        autoComplete="new-password"
-                                        value={password}
-                                        onChangeText={setPassword}
-                                      />
-                                      <TextInput
-                                        style={[styles.input, { backgroundColor: theme.card, borderColor: theme.border, color: theme.text }]}
-                                        placeholder="Confirmer le mot de passe"
-                                        placeholderTextColor={theme.textMuted}
-                                        secureTextEntry
-                                        textContentType="newPassword"
-                                        autoComplete="new-password"
-                                        value={password2}
-                                        onChangeText={setPassword2}
-                                      />
-                                      <TouchableOpacity style={[styles.btn, { backgroundColor: theme.likeBg }]} onPress={setPasswordAfterOtp} disabled={authLoading}>
-                                        <Text style={{ color: theme.likeText, fontWeight: '700' }}>Enregistrer le mot de passe</Text>
-                                      </TouchableOpacity>
-                                    </>
-                                  )}
-                                </ScrollView>
-                              )
-                            );
-                          }}
-                        </Tab.Screen>
-              </Tab.Navigator>
-            </NavigationContainer>
-          </SafeAreaView>
-    </GestureHandlerRootView>
-  );
+                }
+                  return (
+                    <ScrollView
+                      keyboardShouldPersistTaps="handled"
+                      keyboardDismissMode="none"
+                      contentContainerStyle={{ paddingBottom: 40 }}
+                      style={{ backgroundColor: theme.bg }}
+                    >
+                      <Text style={{ color: theme.text, fontSize: 22, fontWeight: '700', marginBottom: 12 }}>
+                        Se connecter
+                      </Text>
+
+                      <View style={{ flexDirection: 'row', marginBottom: 12 }}>
+                        <TouchableOpacity
+                          onPress={() => oauthSignIn('google')}
+                          style={[styles.btn, { backgroundColor: theme.card, borderWidth: StyleSheet.hairlineWidth, borderColor: theme.border, marginRight: 8 }]}
+                          activeOpacity={0.85}
+                        >
+                          <Text style={{ color: theme.text, fontWeight: '700' }}>Continuer avec Google</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          onPress={() => oauthSignIn('facebook')}
+                          style={[styles.btn, { backgroundColor: theme.card, borderWidth: StyleSheet.hairlineWidth, borderColor: theme.border }]}
+                          activeOpacity={0.85}
+                        >
+                          <Text style={{ color: theme.text, fontWeight: '700' }}>Facebook</Text>
+                        </TouchableOpacity>
+                      </View>
+
+                      <Text style={{ color: theme.textMuted, marginVertical: 4, textAlign: 'center' }}>— ou —</Text>
+
+                      <TextInput
+                        style={[styles.input, { backgroundColor: theme.card, borderColor: theme.border, color: theme.text }]}
+                        placeholder="Email" placeholderTextColor={theme.textMuted}
+                        autoCapitalize="none" autoCorrect={false}
+                        textContentType="emailAddress" autoComplete="email"
+                        value={loginEmail} onChangeText={setLoginEmail}
+                      />
+                      <TextInput
+                        style={[styles.input, { backgroundColor: theme.card, borderColor: theme.border, color: theme.text }]}
+                        placeholder="Mot de passe" placeholderTextColor={theme.textMuted}
+                        secureTextEntry textContentType="password" autoComplete="password"
+                        value={loginPassword} onChangeText={setLoginPassword}
+                      />
+                      <TouchableOpacity
+                        style={[styles.btn, { backgroundColor: theme.likeBg }]}
+                        onPress={doLogin} disabled={authLoading}
+                      >
+                        <Text style={{ color: theme.likeText, fontWeight: '700' }}>Se connecter</Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={{ alignSelf:'center', marginTop: 12 }}
+                        onPress={() => navigation.navigate('Register')}
+                      >
+                        <Text style={{ color: theme.likeBg, fontWeight: '700' }}>Créer son compte</Text>
+                      </TouchableOpacity>
+                    </ScrollView>
+                  );
+
+                return (
+                  <View style={{ flex: 1, paddingHorizontal: 16, backgroundColor: theme.bg }}>
+                    <ThemeSelector pref={themePref} setPref={setThemePref} colors={theme} />
+                    <Stack.Navigator screenOptions={{ headerShown: false, contentStyle: { backgroundColor: theme.bg } }}>
+                      <Stack.Screen name="Login" component={LoginScreen} />
+                      <Stack.Screen name="Register" component={RegisterScreen} />
+                    </Stack.Navigator>
+                  </View>
+                );
+              }}
+              </Tab.Screen>
+            </Tab.Navigator>
+          </NavigationContainer>
+        </SafeAreaView>
+      </GestureHandlerRootView>
+    );
 }
 
 /* ────────────────────────────────────────────────────────────────────────────
