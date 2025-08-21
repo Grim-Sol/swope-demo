@@ -38,7 +38,10 @@ function ThemeSelector({ pref, setPref, colors }) {
       style={{
         paddingVertical: 8, paddingHorizontal: 12, borderRadius: 10,
         borderWidth: 1, borderColor: colors.border,
-        backgroundColor: pref === k ? colors.border : 'transparent', marginRight: 8
+        backgroundColor: pref === k
+          ? (colors.blurTint === 'dark' ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.06)')
+          : (colors.blurTint === 'dark' ? 'rgba(255,255,255,0.06)' : 'transparent'),
+        marginRight: 8
       }}>
       <Text style={{ color: colors.text }}>{label}</Text>
     </TouchableOpacity>
@@ -97,8 +100,12 @@ function FilterField({ label, value, onPress, colors }) {
   return (
     <TouchableOpacity
       onPress={onPress}
-      style={{ paddingVertical: 10, paddingHorizontal: 12, borderRadius: 12, borderWidth:1,
-               borderColor: colors.border, backgroundColor: '#00000008', marginRight: 8 }}
+      style={{
+        paddingVertical: 10, paddingHorizontal: 12, borderRadius: 12, borderWidth: 1,
+        borderColor: colors.border,
+  backgroundColor: colors.blurTint === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
+        marginRight: 8
+      }}
       activeOpacity={0.85}
     >
       <Text style={{ color: colors.text }}>
@@ -325,20 +332,20 @@ export default function App() {
   /* Thème */
   const scheme = useColorScheme();
   const [themePref, setThemePref] = useState('system'); // 'system' | 'light' | 'dark'
-  const isDark = themePref === 'dark' || (themePref === 'system' && scheme === 'dark');
+  const isDark = themePref === 'dark' || (themePref === 'system' && scheme === 'dark'); // [SWOPE_THEME: legacy, do not use in JSX]
   const colors = {
-    bg:        isDark ? '#111111' : '#FAFAFA',
-    card:      isDark ? '#1C1C1E' : '#FFFFFF',
-    text:      isDark ? '#FFFFFF' : '#111111',
-    textMuted: isDark ? 'rgba(255,255,255,0.7)' : '#555555',
-    border:    isDark ? '#2A2A2A' : '#E5E5E5',
+  bg:        colors.blurTint === 'dark' ? '#111111' : '#FAFAFA',
+  card:      colors.blurTint === 'dark' ? '#1C1C1E' : '#FFFFFF',
+  text:      colors.blurTint === 'dark' ? '#FFFFFF' : '#111111',
+  textMuted: colors.blurTint === 'dark' ? 'rgba(255,255,255,0.7)' : '#555555',
+  border:    colors.blurTint === 'dark' ? '#2A2A2A' : '#E5E5E5',
 
     // Boutons (intuitifs)
     passBg:   '#FF3B30', passText: '#FFFFFF',   // rouge iOS
     likeBg:   '#0A84FF', likeText: '#FFFFFF',   // bleu iOS
     buyBg:    '#34C759', buyText:  '#FFFFFF',   // vert iOS (pour plus tard)
 
-    blurTint:  isDark ? 'dark' : 'light',
+  blurTint:  isDark ? 'dark' : 'light', // This is the only place isDark is allowed
   };
 
   /* Données / UI */
@@ -522,12 +529,13 @@ export default function App() {
               tabBarStyle: { backgroundColor: colors.card, borderTopColor: colors.border },
               tabBarActiveTintColor: colors.text,
               tabBarInactiveTintColor: colors.textMuted,
+              sceneContainerStyle: { backgroundColor: colors.bg },
             }}
             detachInactiveScreens={false}
           >
             <Tab.Screen name="Feed" options={{ title: 'Découvrir' }}>
               {() => (
-                <View style={{ flex: 1 }}>
+                <View style={{ flex: 1, backgroundColor: colors.bg }}>
                   <ThemeSelector pref={themePref} setPref={setThemePref} colors={colors} />
                   {loading ? (
                     <View style={[styles.center]}>
@@ -615,6 +623,7 @@ export default function App() {
                   ) : (
                     <>
                       {/* Barre de filtres */}
+                      // [SWOPE_FILTERS:START]
                       <View style={{ flexDirection:'row', alignItems:'center', marginBottom: 6 }}>
                         <FilterField label="Marque" value={brandFilter} onPress={() => setBrandPickerOpen(true)} colors={colors} />
                         <FilterField label="Taille" value={sizeFilter} onPress={() => setSizePickerOpen(true)} colors={colors} />
@@ -646,6 +655,7 @@ export default function App() {
                       />
 
                       {/* Deck Swiper (centré, 3:4) */}
+                      // [SWOPE_DECK:START]
                       <View style={styles.deck}>
                         {inRange ? (
                           <Swiper
@@ -696,9 +706,10 @@ export default function App() {
                       </View>
 
                       {/* Bandeau info SOUS la photo (effet “glass” renforcé) */}
+                      // [SWOPE_GLASS:START]
                       {current && (
                         <View style={styles.infoPanelWrap}>
-                          <View style={styles.glassPanelBelow}>
+                          <View style={[styles.glassPanelBelow, { borderColor: (colors.blurTint === 'dark') ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.08)' }]}> 
                             {/* Fond = image floutée */}
                             <Image
                               source={{ uri: current.image }}
@@ -707,22 +718,21 @@ export default function App() {
                               blurRadius={36}
                             />
                             {/* Flou additionnel + highlight vertical */}
-                            <BlurView intensity={34} tint={colors.blurTint} style={StyleSheet.absoluteFill} />
+                            <BlurView intensity={38} tint={colors.blurTint} style={StyleSheet.absoluteFill} />
                             <LinearGradient
                               colors={['rgba(255,255,255,0.14)','rgba(255,255,255,0)']}
-                              start={{ x: 0, y: 0 }}
-                              end={{ x: 0, y: 1 }}
-                              style={[StyleSheet.absoluteFill, { opacity: isDark ? 0.35 : 0.6 }]}
+                              start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}
+                              style={[StyleSheet.absoluteFill, { opacity: (colors.blurTint === 'dark') ? 0.30 : 0.60 }]}
                             />
                             {/* Voile de lisibilité */}
                             <View
                               style={[
                                 StyleSheet.absoluteFill,
-                                { backgroundColor: isDark ? 'rgba(0,0,0,0.10)' : 'rgba(255,255,255,0.18)' }
+                                { backgroundColor: (colors.blurTint === 'dark') ? 'rgba(0,0,0,0.10)' : 'rgba(255,255,255,0.18)' }
                               ]}
                             />
                             {/* Contenu */}
-                            <View style={{ paddingHorizontal: 14, paddingVertical: 12 }}>
+                            <View style={{ paddingHorizontal: 14, paddingTop: 10, paddingBottom: 14 }}>
                               <Text style={styles.title}>{current.brand} · {current.title}</Text>
                               <Text style={styles.meta}>{current.size}</Text>
                               <Text style={styles.price}>{(current.price_cents / 100).toFixed(2)} €</Text>
@@ -732,20 +742,24 @@ export default function App() {
                       )}
 
                       {/* Actions : boutons “glass” colorés */}
+                      // [SWOPE_ACTIONS:START]
                       <View style={styles.actions}>
                         {/* Passer (rouge) */}
                         <TouchableOpacity
                           activeOpacity={0.85}
-                          style={[styles.btnXL, styles.glassBtn]}
+                          style={[styles.btnXL, styles.glassBtn, { borderColor: (colors.blurTint === 'dark') ? 'rgba(255,255,255,0.14)' : 'rgba(0,0,0,0.10)' }]}
                           onPress={() => manualSwipe(-1)}
+                          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                          accessibilityRole="button"
+                          accessibilityLabel="Passer"
                         >
                           <BlurView intensity={32} tint={colors.blurTint} style={StyleSheet.absoluteFill} />
-                          <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255,59,48,0.36)' }]} />
+                          <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255,59,48,0.42)' }]} />
                           <LinearGradient
                             colors={['rgba(255,255,255,0.18)','rgba(255,255,255,0)']}
                             start={{ x: 0, y: 0 }}
                             end={{ x: 0, y: 1 }}
-                            style={[StyleSheet.absoluteFill, { opacity: isDark ? 0.35 : 0.55 }]}
+                            style={[StyleSheet.absoluteFill, { opacity: (colors.blurTint === 'dark') ? 0.35 : 0.55 }]}
                           />
                           <Text style={[styles.btnLabelXL, { color: colors.passText }]}>👎  Passer</Text>
                         </TouchableOpacity>
@@ -753,34 +767,41 @@ export default function App() {
                         {/* Favori (bleu) */}
                         <TouchableOpacity
                           activeOpacity={0.85}
-                          style={[styles.btnXL, styles.glassBtn]}
+                          style={[styles.btnXL, styles.glassBtn, { borderColor: (colors.blurTint === 'dark') ? 'rgba(255,255,255,0.14)' : 'rgba(0,0,0,0.10)' }]}
                           onPress={() => manualSwipe(1)}
+                          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                          accessibilityRole="button"
+                          accessibilityLabel="Ajouter aux favoris"
                         >
                           <BlurView intensity={32} tint={colors.blurTint} style={StyleSheet.absoluteFill} />
-                          <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(10,132,255,0.34)' }]} />
+                          <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(10,132,255,0.42)' }]} />
                           <LinearGradient
                             colors={['rgba(255,255,255,0.18)','rgba(255,255,255,0)']}
                             start={{ x: 0, y: 0 }}
                             end={{ x: 0, y: 1 }}
-                            style={[StyleSheet.absoluteFill, { opacity: isDark ? 0.35 : 0.55 }]}
+                            style={[StyleSheet.absoluteFill, { opacity: (colors.blurTint === 'dark') ? 0.35 : 0.55 }]}
                           />
                           <Text style={[styles.btnLabelXL, { color: colors.likeText }]}>💙  Favori</Text>
                         </TouchableOpacity>
-                      </View>
+                       </View>
+                      // [SWOPE_FILTERS:END]
                     </>
                   )}
-                </View>
-              )}
+                       </View>
+                      // [SWOPE_DECK:END]
+                       )}
+                      // [SWOPE_GLASS:END]
             </Tab.Screen>
             <Tab.Screen name="Account" options={{ title: 'Compte' }}>
               {() => (
-                <View style={{ flex: 1, paddingHorizontal: 16 }}>
+                <View style={{ flex: 1, paddingHorizontal: 16, backgroundColor: colors.bg }}>
                   <ThemeSelector pref={themePref} setPref={setThemePref} colors={colors} />
                   {user?.id ? (
                     <ScrollView
                       keyboardShouldPersistTaps="handled"
                       keyboardDismissMode="none"
                       contentContainerStyle={{ paddingBottom: 40 }}
+                      style={{ backgroundColor: colors.bg }}
                     >
                       <Text style={{ color: colors.text, fontSize: 22, fontWeight: '700', marginBottom: 12 }}>
                         Mon compte
@@ -800,6 +821,7 @@ export default function App() {
                       keyboardShouldPersistTaps="handled"
                       keyboardDismissMode="none"
                       contentContainerStyle={{ paddingBottom: 40 }}
+                      style={{ backgroundColor: colors.bg }}
                     >
                       {/* Switcher d’auth */}
                       <View style={{ flexDirection: 'row', alignSelf: 'center', marginBottom: 12 }}>
@@ -820,7 +842,8 @@ export default function App() {
                             <Text style={{ color: colors.text }}>{opt.label}</Text>
                           </TouchableOpacity>
                         ))}
-                      </View>
+                       </View>
+                      // [SWOPE_ACTIONS:END]
 
                       {/* OAuth toujours visibles en haut */}
                       <View style={{ flexDirection: 'row', marginBottom: 12 }}>
@@ -1051,7 +1074,7 @@ const styles = StyleSheet.create({
   glassBtn: {
     overflow: 'hidden',
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255,255,255,0.22)',
+  borderColor: colors.blurTint === 'dark' ? 'rgba(255,255,255,0.14)' : 'rgba(0,0,0,0.10)',
     backgroundColor: 'transparent',
     // elevation: 1, // (optionnel Android)
   },
