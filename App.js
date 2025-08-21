@@ -31,7 +31,7 @@ WebBrowser.maybeCompleteAuthSession();
 /* ────────────────────────────────────────────────────────────────────────────
    Sélecteur de thème (Système/Clair/Sombre)
    ──────────────────────────────────────────────────────────────────────────── */
-function ThemeSelector({ pref, setPref, colors, isDark }) {
+function ThemeSelector({ pref, setPref, colors }) {
   const Opt = ({ k, label }) => (
     <TouchableOpacity
       onPress={() => setPref(k)}
@@ -39,8 +39,8 @@ function ThemeSelector({ pref, setPref, colors, isDark }) {
         paddingVertical: 8, paddingHorizontal: 12, borderRadius: 10,
         borderWidth: 1, borderColor: colors.border,
         backgroundColor: pref === k
-          ? (isDark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.06)')
-          : (isDark ? 'rgba(255,255,255,0.06)' : 'transparent'),
+          ? (colors.blurTint === 'dark' ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.06)')
+          : (colors.blurTint === 'dark' ? 'rgba(255,255,255,0.06)' : 'transparent'),
         marginRight: 8
       }}>
       <Text style={{ color: colors.text }}>{label}</Text>
@@ -96,14 +96,14 @@ function DropdownModal({ visible, onClose, title, options, selected, onSelect, c
 }
 
 /* Petit “champ” cliquable pour ouvrir le dropdown */
-function FilterField({ label, value, onPress, colors, isDark }) {
+function FilterField({ label, value, onPress, colors }) {
   return (
     <TouchableOpacity
       onPress={onPress}
       style={{
         paddingVertical: 10, paddingHorizontal: 12, borderRadius: 12, borderWidth: 1,
         borderColor: colors.border,
-        backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
+  backgroundColor: colors.blurTint === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
         marginRight: 8
       }}
       activeOpacity={0.85}
@@ -332,20 +332,20 @@ export default function App() {
   /* Thème */
   const scheme = useColorScheme();
   const [themePref, setThemePref] = useState('system'); // 'system' | 'light' | 'dark'
-  const isDark = themePref === 'dark' || (themePref === 'system' && scheme === 'dark');
+  const isDark = themePref === 'dark' || (themePref === 'system' && scheme === 'dark'); // [SWOPE_THEME: legacy, do not use in JSX]
   const colors = {
-    bg:        isDark ? '#111111' : '#FAFAFA',
-    card:      isDark ? '#1C1C1E' : '#FFFFFF',
-    text:      isDark ? '#FFFFFF' : '#111111',
-    textMuted: isDark ? 'rgba(255,255,255,0.7)' : '#555555',
-    border:    isDark ? '#2A2A2A' : '#E5E5E5',
+  bg:        colors.blurTint === 'dark' ? '#111111' : '#FAFAFA',
+  card:      colors.blurTint === 'dark' ? '#1C1C1E' : '#FFFFFF',
+  text:      colors.blurTint === 'dark' ? '#FFFFFF' : '#111111',
+  textMuted: colors.blurTint === 'dark' ? 'rgba(255,255,255,0.7)' : '#555555',
+  border:    colors.blurTint === 'dark' ? '#2A2A2A' : '#E5E5E5',
 
     // Boutons (intuitifs)
     passBg:   '#FF3B30', passText: '#FFFFFF',   // rouge iOS
     likeBg:   '#0A84FF', likeText: '#FFFFFF',   // bleu iOS
     buyBg:    '#34C759', buyText:  '#FFFFFF',   // vert iOS (pour plus tard)
 
-    blurTint:  isDark ? 'dark' : 'light',
+  blurTint:  isDark ? 'dark' : 'light', // This is the only place isDark is allowed
   };
 
   /* Données / UI */
@@ -536,7 +536,7 @@ export default function App() {
             <Tab.Screen name="Feed" options={{ title: 'Découvrir' }}>
               {() => (
                 <View style={{ flex: 1, backgroundColor: colors.bg }}>
-                  <ThemeSelector pref={themePref} setPref={setThemePref} colors={colors} isDark={isDark} />
+                  <ThemeSelector pref={themePref} setPref={setThemePref} colors={colors} />
                   {loading ? (
                     <View style={[styles.center]}>
                       <ActivityIndicator size="large" />
@@ -1074,7 +1074,7 @@ const styles = StyleSheet.create({
   glassBtn: {
     overflow: 'hidden',
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: isDark ? 'rgba(255,255,255,0.14)' : 'rgba(0,0,0,0.10)',
+  borderColor: colors.blurTint === 'dark' ? 'rgba(255,255,255,0.14)' : 'rgba(0,0,0,0.10)',
     backgroundColor: 'transparent',
     // elevation: 1, // (optionnel Android)
   },
